@@ -1,4 +1,3 @@
-import java.io.Console;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Scanner;
@@ -6,9 +5,12 @@ import java.util.Scanner;
 public class VendingMachine {
 
 	private CoinChangerInterface coinChanger;
+	private InventoryManagerInterface inventoryManager;
 
-	public VendingMachine(CoinChangerInterface coinChanger) {
+	public VendingMachine(CoinChangerInterface coinChanger,
+			InventoryManagerInterface inventoryManager) {
 		this.coinChanger = coinChanger;
+		this.inventoryManager = inventoryManager;
 	}
 
 	public void makeSelection(Scanner scanner, String optionSelected) {
@@ -32,8 +34,7 @@ public class VendingMachine {
 		String moneyString = formatter.format(coinChanger.getCoinReturn()
 				.getTotal());
 
-		System.out.print("You find " + moneyString
-				+ " in the coin Return\n");
+		System.out.print("You find " + moneyString + " in the coin Return\n");
 		coinChanger.getCoinReturn().emptyReturn();
 	}
 
@@ -43,15 +44,38 @@ public class VendingMachine {
 		String itemSelection = scanner.nextLine();
 
 		if (itemSelection.equals("1")) {
-			coinChanger.deductAmount(1.00);
-			System.out.print("THANK YOU\n");
+			if (coinChanger.isPossibleToDeductAmount(1.00)) {
+
+				tryToDispenseItem(Items.SODA, 1.00);
+			} else {
+				System.out.print("PRICE $1.00\n");
+			}
+
 		} else if (itemSelection.equals("2")) {
-			coinChanger.deductAmount(.50);
-			System.out.print("THANK YOU\n");
+
+			if (coinChanger.isPossibleToDeductAmount(.50)) {
+				tryToDispenseItem(Items.CHIPS, .5);
+			} else {
+				System.out.print("PRICE $0.50\n");
+			}
 
 		} else if (itemSelection.equals("3")) {
-			coinChanger.deductAmount(.65);
+			if (coinChanger.isPossibleToDeductAmount(.65)) {
+				tryToDispenseItem(Items.CANDY, .65);
+			} else {
+				System.out.print("PRICE $0.65\n");
+			}
+		}
+	}
+
+	private void tryToDispenseItem(Items ItemToTryAndDespense, double price) {
+		if (inventoryManager.isPossibleToDespense(ItemToTryAndDespense)) {
+			coinChanger.deductAmount(price);
+			inventoryManager.dispense(ItemToTryAndDespense);
 			System.out.print("THANK YOU\n");
+		} else {
+
+			System.out.print("SOLD OUT\n");
 		}
 	}
 
@@ -99,6 +123,10 @@ public class VendingMachine {
 		String moneyString = formatter.format(coinChanger.getTotal());
 
 		System.out.print("Total Amount: " + moneyString + "\n");
+	}
+
+	public InventoryManagerInterface getInventoryManager() {
+		return this.inventoryManager;
 	}
 
 }

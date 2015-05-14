@@ -3,7 +3,7 @@ public interface CoinChangerInterface {
 
 	public abstract CoinReturnInterface getCoinReturn();
 
-	public abstract boolean deductAmount(double amountToDeduct);
+	public abstract void deductAmount(double amountToDeduct);
 
 	public abstract void returnChange();
 
@@ -11,4 +11,5 @@ public interface CoinChangerInterface {
 
 	public abstract boolean accept(Coins coinToAdd);
 
+	public abstract boolean isPossibleToDeductAmount(double amountToDedduct);
 }

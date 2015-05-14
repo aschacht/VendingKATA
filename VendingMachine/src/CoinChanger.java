@@ -66,19 +66,22 @@ public class CoinChanger implements CoinChangerInterface {
 	}
 
 	@Override
-	public boolean deductAmount(double amountToDeduct) {
+	public void deductAmount(double amountToDeduct) {
 		double total = addTotal();
 		if (total >= amountToDeduct) {
 			total -= amountToDeduct;
 			returnChange(total);
-			return true;
 		}
-		return false;
 	}
 
 	@Override
 	public CoinReturnInterface getCoinReturn() {
 		return coinReturn;
+	}
+
+	@Override
+	public boolean isPossibleToDeductAmount(double amountToDedduct) {
+		return addTotal()>=amountToDedduct;
 	}
 
 

@@ -1,4 +1,3 @@
-import static org.junit.Assert.*;
 
 
 import junit.framework.TestCase;
@@ -50,7 +49,7 @@ public class CoinChangerTest extends TestCase {
 		changer.accept(Coins.QUARTERS);
 		
 		assertEquals(1.00,changer.getTotal(),0.01);
-		assertTrue(changer.deductAmount(1.00));
+		changer.deductAmount(1.00);
 		assertEquals(0.00,changer.getTotal(),0.01);
 		assertEquals(0.00,changer.getCoinReturn().getTotal(),0.01);
 
@@ -61,7 +60,7 @@ public class CoinChangerTest extends TestCase {
 		changer.accept(Coins.DIMES);
 		
 		assertEquals(.90,changer.getTotal(),0.01);
-		assertTrue(changer.deductAmount(.45));
+		changer.deductAmount(.45);
 		assertEquals(0.00,changer.getTotal(),0.01);
 		assertEquals(0.45,changer.getCoinReturn().getTotal(),0.01);
 
@@ -74,7 +73,7 @@ public class CoinChangerTest extends TestCase {
 		changer.accept(Coins.DIMES);
 		
 		assertEquals(.95,changer.getTotal(),0.01);
-		assertTrue(changer.deductAmount(.05));
+		changer.deductAmount(.05);
 		assertEquals(0.00,changer.getTotal(),0.01);
 		assertEquals(1.35,changer.getCoinReturn().getTotal(),0.01);
 
@@ -87,7 +86,7 @@ public class CoinChangerTest extends TestCase {
 	
 		
 		assertEquals(.50,changer.getTotal(),0.01);
-		assertFalse(changer.deductAmount(.85));
+		changer.deductAmount(.85);
 		assertEquals(0.50,changer.getTotal(),0.01);
 		assertEquals(1.35,changer.getCoinReturn().getTotal(),0.01);
 
@@ -95,6 +94,28 @@ public class CoinChangerTest extends TestCase {
 	
 	
 	}
+	
+	
+	
+	public void testCanYouDeductAmount() throws Exception {
+	
+		CoinChangerInterface changer = new CoinChanger(new CoinReturn());
+		changer.accept(Coins.QUARTERS);
+		changer.accept(Coins.QUARTERS);
+		changer.accept(Coins.QUARTERS);
+		changer.accept(Coins.QUARTERS);
+		
+		assertTrue(changer.isPossibleToDeductAmount(1.00));
+		assertFalse(changer.isPossibleToDeductAmount(1.25));
+
+		changer.accept(Coins.NICKLES);
+		changer.accept(Coins.DIMES);
+
+		assertTrue(changer.isPossibleToDeductAmount(1.15));
+		assertFalse(changer.isPossibleToDeductAmount(1.25));
+
+	}
+	
 	
 	
 }

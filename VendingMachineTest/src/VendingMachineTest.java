@@ -1,21 +1,20 @@
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.InputStream;
 import java.io.PrintStream;
 import java.util.Scanner;
+
 
 import junit.framework.TestCase;
 
 public class VendingMachineTest extends TestCase {
 
 	private final ByteArrayOutputStream outContent = new ByteArrayOutputStream();
-	private final ByteArrayOutputStream errContent = new ByteArrayOutputStream();
 
 	@Override
 	protected void setUp() throws Exception {
 		System.setOut(new PrintStream(outContent));
 
-		System.setErr(new PrintStream(errContent));
 		super.setUp();
 	}
 
@@ -28,15 +27,17 @@ public class VendingMachineTest extends TestCase {
 
 	public void testConstructor() throws Exception {
 		CoinChangerInterface coinChanger = new MockCoinChanger();
-		VendingMachine machine = new VendingMachine(coinChanger);
+		MockInventoryManager inventoryManager = new MockInventoryManager();
+		VendingMachine machine = new VendingMachine(coinChanger,inventoryManager);
 		assertSame(coinChanger, machine.getCoinChanger());
+		assertSame(inventoryManager, machine.getInventoryManager());
 
 	}
 	
 	public void testPrintTotal() throws Exception {
 		MockCoinChanger mockCoinChanger = new MockCoinChanger();
 		mockCoinChanger.setTotal(2.50);
-		VendingMachine vendingMachine = new VendingMachine(mockCoinChanger);
+		VendingMachine vendingMachine = new VendingMachine(mockCoinChanger,new MockInventoryManager());
 		vendingMachine.printTotal();
 		assertEquals("Total Amount: $2.50\n", outContent.toString());
 		mockCoinChanger.setTotal(.45);
@@ -49,7 +50,7 @@ public class VendingMachineTest extends TestCase {
 			throws Exception {
 
 		MockCoinChanger coinChanger = new MockCoinChanger();
-		VendingMachine machine = new VendingMachine(coinChanger);
+		VendingMachine machine = new VendingMachine(coinChanger,new MockInventoryManager());
 
 		System.setIn(new ByteArrayInputStream("QqQQq\n".getBytes()));
 		machine.makeSelection(new Scanner(System.in), "1");
@@ -71,7 +72,7 @@ public class VendingMachineTest extends TestCase {
 			throws Exception {
 
 		MockCoinChanger coinChanger = new MockCoinChanger();
-		VendingMachine machine = new VendingMachine(coinChanger);
+		VendingMachine machine = new VendingMachine(coinChanger,new MockInventoryManager());
 
 		System.setIn(new ByteArrayInputStream("DdDDd\n".getBytes()));
 		machine.makeSelection(new Scanner(System.in), "1");
@@ -88,7 +89,7 @@ public class VendingMachineTest extends TestCase {
 			throws Exception {
 
 		MockCoinChanger coinChanger = new MockCoinChanger();
-		VendingMachine machine = new VendingMachine(coinChanger);
+		VendingMachine machine = new VendingMachine(coinChanger,new MockInventoryManager());
 
 		System.setIn(new ByteArrayInputStream("NnNnN\n".getBytes()));
 		machine.makeSelection(new Scanner(System.in), "1");
@@ -106,7 +107,7 @@ public class VendingMachineTest extends TestCase {
 
 		MockCoinChanger coinChanger = new MockCoinChanger();
 		coinChanger.setAcceptCoin(false);
-		VendingMachine machine = new VendingMachine(coinChanger);
+		VendingMachine machine = new VendingMachine(coinChanger,new MockInventoryManager());
 
 		System.setIn(new ByteArrayInputStream("PpPpP\n".getBytes()));
 
@@ -120,70 +121,305 @@ public class VendingMachineTest extends TestCase {
 		assertEquals(Coins.PENNIES, coinChanger.getListOfCoinsAccepted().get(0));
 	}
 
-	public void testDisplaysItemMenue_ColaSelected()
+	public void testDisplaysItemMenue_ColaSelected_AndInStock()
 			throws Exception {
 		
 		MockCoinChanger coinChanger = new MockCoinChanger();
-		coinChanger.setTotal(1.00);
-		VendingMachine machine = new VendingMachine(coinChanger);
+		MockInventoryManager inventoryManager = new MockInventoryManager();
+		
+		inventoryManager.setIsPossibleToDespense(true);
+		coinChanger.setIsPossibleToDeduct(true);
+		
+		VendingMachine machine = new VendingMachine(coinChanger,inventoryManager);
 		
 		System.setIn(new ByteArrayInputStream("1\n".getBytes()));
+
+		assertFalse(inventoryManager.dispenseWasCalled);
+		assertFalse(inventoryManager.isPossibleToDespenseWasCalled);
 		
 		machine.makeSelection(new Scanner(System.in), "2");
+		
 		assertEquals("Please Select From the Following Items\n"
 				+ "1)cola  $1.00\n"
 				+ "2)chips $0.50\n"
 				+ "3)candy $0.65\nTHANK YOU\n", outContent.toString());
-		assertTrue(coinChanger.deductTotalWasCalled);
-		assertEquals(1.00,coinChanger.amountDeducted,.01);
+
+		assertTrue(inventoryManager.dispenseWasCalled);
+		assertTrue(inventoryManager.isPossibleToDespenseWasCalled);
 
 	}
-	
-	public void testDisplaysItemMenue_CHipsSelected()
+	public void testDisplaysItemMenue_ColaSelected_AndOUTOFSTOCK()
 			throws Exception {
 		
 		MockCoinChanger coinChanger = new MockCoinChanger();
-		coinChanger.setTotal(1.00);
-		VendingMachine machine = new VendingMachine(coinChanger);
+		MockInventoryManager inventoryManager = new MockInventoryManager();
+
+		inventoryManager.setIsPossibleToDespense(false);
+		coinChanger.setIsPossibleToDeduct(true);
+		
+		VendingMachine machine = new VendingMachine(coinChanger,inventoryManager);
+		
+		System.setIn(new ByteArrayInputStream("1\n".getBytes()));
+
+		assertFalse(inventoryManager.dispenseWasCalled);
+		assertFalse(inventoryManager.isPossibleToDespenseWasCalled);
+		
+		machine.makeSelection(new Scanner(System.in), "2");
+		
+		assertEquals("Please Select From the Following Items\n"
+				+ "1)cola  $1.00\n"
+				+ "2)chips $0.50\n"
+				+ "3)candy $0.65\nSOLD OUT\n", outContent.toString());
+
+		assertFalse(inventoryManager.dispenseWasCalled);
+		assertTrue(inventoryManager.isPossibleToDespenseWasCalled);
+		
+	}
+	public void testDisplaysItemMenue_CHipsSelected_AndInStock()
+			throws Exception {
+		
+		MockCoinChanger coinChanger = new MockCoinChanger();
+		MockInventoryManager inventoryManager = new MockInventoryManager();
+
+		inventoryManager.setIsPossibleToDespense(true);
+		coinChanger.setIsPossibleToDeduct(true);
+		
+		VendingMachine machine = new VendingMachine(coinChanger,inventoryManager);
 		
 		System.setIn(new ByteArrayInputStream("2\n".getBytes()));
+		assertFalse(inventoryManager.dispenseWasCalled);
+		assertFalse(inventoryManager.isPossibleToDespenseWasCalled);
 		
 		machine.makeSelection(new Scanner(System.in), "2");
 		assertEquals("Please Select From the Following Items\n"
 				+ "1)cola  $1.00\n"
 				+ "2)chips $0.50\n"
 				+ "3)candy $0.65\nTHANK YOU\n", outContent.toString());
-		assertTrue(coinChanger.deductTotalWasCalled);
-		assertEquals(0.50,coinChanger.amountDeducted,.01);
+		assertTrue(inventoryManager.dispenseWasCalled);
+		assertTrue(inventoryManager.isPossibleToDespenseWasCalled);
 		
 	}
 	
-
-	public void testDisplaysItemMenue_CandySelected()
+	public void testDisplaysItemMenue_CHipsSelected_AndOUTOFSTOCK()
 			throws Exception {
 		
 		MockCoinChanger coinChanger = new MockCoinChanger();
-		coinChanger.setTotal(1.00);
-		VendingMachine machine = new VendingMachine(coinChanger);
+		MockInventoryManager inventoryManager = new MockInventoryManager();
+		
+		inventoryManager.setIsPossibleToDespense(false);
+		coinChanger.setIsPossibleToDeduct(true);
+		
+		VendingMachine machine = new VendingMachine(coinChanger,inventoryManager);
+		
+		System.setIn(new ByteArrayInputStream("2\n".getBytes()));
+
+		assertFalse(inventoryManager.dispenseWasCalled);
+		assertFalse(inventoryManager.isPossibleToDespenseWasCalled);
+		
+		machine.makeSelection(new Scanner(System.in), "2");
+		
+		assertEquals("Please Select From the Following Items\n"
+				+ "1)cola  $1.00\n"
+				+ "2)chips $0.50\n"
+				+ "3)candy $0.65\nSOLD OUT\n", outContent.toString());
+		
+		assertFalse(inventoryManager.dispenseWasCalled);
+		assertTrue(inventoryManager.isPossibleToDespenseWasCalled);
+		
+	}
+	public void testDisplaysItemMenue_CAndySelected_AndInStock()
+			throws Exception {
+		
+		MockCoinChanger coinChanger = new MockCoinChanger();
+		MockInventoryManager inventoryManager = new MockInventoryManager();
+		
+		inventoryManager.setIsPossibleToDespense(true);
+		coinChanger.setIsPossibleToDeduct(true);
+		
+		VendingMachine machine = new VendingMachine(coinChanger,inventoryManager);
 		
 		System.setIn(new ByteArrayInputStream("3\n".getBytes()));
 		
+		assertFalse(inventoryManager.dispenseWasCalled);
+		assertFalse(inventoryManager.isPossibleToDespenseWasCalled);
+		
+		machine.makeSelection(new Scanner(System.in), "2");
+		assertEquals("Please Select From the Following Items\n"
+				+ "1)cola  $1.00\n"
+				+ "2)chips $0.50\n"
+				+ "3)candy $0.65\nTHANK YOU\n", outContent.toString());
+		assertTrue(inventoryManager.dispenseWasCalled);
+		assertTrue(inventoryManager.isPossibleToDespenseWasCalled);
+		
+	}
+	
+	public void testDisplaysItemMenue_CAndySelected_AndOUTOFSTOCK()
+			throws Exception {
+		
+		MockCoinChanger coinChanger = new MockCoinChanger();
+		MockInventoryManager inventoryManager = new MockInventoryManager();
+		
+		inventoryManager.setIsPossibleToDespense(false);
+		coinChanger.setIsPossibleToDeduct(true);
+		
+		VendingMachine machine = new VendingMachine(coinChanger,inventoryManager);
+		
+		System.setIn(new ByteArrayInputStream("3\n".getBytes()));
+		assertFalse(inventoryManager.dispenseWasCalled);
+		assertFalse(inventoryManager.isPossibleToDespenseWasCalled);
+		
+		machine.makeSelection(new Scanner(System.in), "2");
+		assertEquals("Please Select From the Following Items\n"
+				+ "1)cola  $1.00\n"
+				+ "2)chips $0.50\n"
+				+ "3)candy $0.65\nSOLD OUT\n", outContent.toString());
+		assertFalse(inventoryManager.dispenseWasCalled);
+		assertTrue(inventoryManager.isPossibleToDespenseWasCalled);
+		
+	}
+	
+	
+	
+	public void testChipsHasCorrectAmoutOfMoney() throws Exception {
+		
+		MockCoinChanger coinChanger = new MockCoinChanger();
+		MockInventoryManager inventoryManager = new MockInventoryManager();
+		VendingMachine machine = new VendingMachine(coinChanger,inventoryManager);
+
+		inventoryManager.setIsPossibleToDespense(true);
+		coinChanger.setIsPossibleToDeduct(true);
+		
+		System.setIn(new ByteArrayInputStream("2\n".getBytes()));
+		assertFalse(coinChanger.deductTotalWasCalled);
+		assertFalse(coinChanger.isPossiableToDeductAmountWasCalled);
+		
 		machine.makeSelection(new Scanner(System.in), "2");
 		assertEquals("Please Select From the Following Items\n"
 				+ "1)cola  $1.00\n"
 				+ "2)chips $0.50\n"
 				+ "3)candy $0.65\nTHANK YOU\n", outContent.toString());
 		assertTrue(coinChanger.deductTotalWasCalled);
-		assertEquals(0.65,coinChanger.amountDeducted,.01);
-		
+		assertTrue(coinChanger.isPossiableToDeductAmountWasCalled);
 	}
 	
+	public void testChipsHasInsufficientFunds() throws Exception {
+		
+		MockCoinChanger coinChanger = new MockCoinChanger();
+		MockInventoryManager inventoryManager = new MockInventoryManager();
+		VendingMachine machine = new VendingMachine(coinChanger,inventoryManager);
+		
+		
+		System.setIn(new ByteArrayInputStream("2\n".getBytes()));
+		assertFalse(coinChanger.deductTotalWasCalled);
+		assertFalse(coinChanger.isPossiableToDeductAmountWasCalled);
+		
+		machine.makeSelection(new Scanner(System.in), "2");
+		assertEquals("Please Select From the Following Items\n"
+				+ "1)cola  $1.00\n"
+				+ "2)chips $0.50\n"
+				+ "3)candy $0.65\nPRICE $0.50\n", outContent.toString());
+		assertFalse(coinChanger.deductTotalWasCalled);
+		assertTrue(coinChanger.isPossiableToDeductAmountWasCalled);
+	}
+	
+	
+	public void testCandyHasCorrectAmoutOfMoney() throws Exception {
+		
+		MockCoinChanger coinChanger = new MockCoinChanger();
+		MockInventoryManager inventoryManager = new MockInventoryManager();
+		VendingMachine machine = new VendingMachine(coinChanger,inventoryManager);
+		
+		inventoryManager.setIsPossibleToDespense(true);
+		coinChanger.setIsPossibleToDeduct(true);
+		
+		System.setIn(new ByteArrayInputStream("3\n".getBytes()));
+		assertFalse(coinChanger.deductTotalWasCalled);
+		assertFalse(coinChanger.isPossiableToDeductAmountWasCalled);
+		
+		machine.makeSelection(new Scanner(System.in), "2");
+		assertEquals("Please Select From the Following Items\n"
+				+ "1)cola  $1.00\n"
+				+ "2)chips $0.50\n"
+				+ "3)candy $0.65\nTHANK YOU\n", outContent.toString());
+		assertTrue(coinChanger.deductTotalWasCalled);
+		assertTrue(coinChanger.isPossiableToDeductAmountWasCalled);
+	}
+	
+	public void testCandyHasInsufficientFunds() throws Exception {
+		
+		MockCoinChanger coinChanger = new MockCoinChanger();
+		MockInventoryManager inventoryManager = new MockInventoryManager();
+		VendingMachine machine = new VendingMachine(coinChanger,inventoryManager);
+		
+		
+		System.setIn(new ByteArrayInputStream("3\n".getBytes()));
+		assertFalse(coinChanger.deductTotalWasCalled);
+		assertFalse(coinChanger.isPossiableToDeductAmountWasCalled);
+		
+		machine.makeSelection(new Scanner(System.in), "2");
+		assertEquals("Please Select From the Following Items\n"
+				+ "1)cola  $1.00\n"
+				+ "2)chips $0.50\n"
+				+ "3)candy $0.65\nPRICE $0.65\n", outContent.toString());
+		assertFalse(coinChanger.deductTotalWasCalled);
+		assertTrue(coinChanger.isPossiableToDeductAmountWasCalled);
+	}
+	
+	public void testSodaHasCorrectAmoutOfMoney() throws Exception {
+		
+		MockCoinChanger coinChanger = new MockCoinChanger();
+		MockInventoryManager inventoryManager = new MockInventoryManager();
+		VendingMachine machine = new VendingMachine(coinChanger,inventoryManager);
+		
+		inventoryManager.setIsPossibleToDespense(true);
+		coinChanger.setIsPossibleToDeduct(true);
+		
+		System.setIn(new ByteArrayInputStream("1\n".getBytes()));
+		assertFalse(coinChanger.deductTotalWasCalled);
+		assertFalse(coinChanger.isPossiableToDeductAmountWasCalled);
+		
+		machine.makeSelection(new Scanner(System.in), "2");
+		assertEquals("Please Select From the Following Items\n"
+				+ "1)cola  $1.00\n"
+				+ "2)chips $0.50\n"
+				+ "3)candy $0.65\nTHANK YOU\n", outContent.toString());
+		assertTrue(coinChanger.deductTotalWasCalled);
+		assertTrue(coinChanger.isPossiableToDeductAmountWasCalled);
+	}
+	
+	public void testSodaHasInsufficientFunds() throws Exception {
+		
+		MockCoinChanger coinChanger = new MockCoinChanger();
+		MockInventoryManager inventoryManager = new MockInventoryManager();
+		VendingMachine machine = new VendingMachine(coinChanger,inventoryManager);
+		
+		coinChanger.setIsPossibleToDeduct(false);
+		
+		System.setIn(new ByteArrayInputStream("1\n".getBytes()));
+		assertFalse(coinChanger.deductTotalWasCalled);
+		assertFalse(coinChanger.isPossiableToDeductAmountWasCalled);
+		
+		machine.makeSelection(new Scanner(System.in), "2");
+		assertEquals("Please Select From the Following Items\n"
+				+ "1)cola  $1.00\n"
+				+ "2)chips $0.50\n"
+				+ "3)candy $0.65\nPRICE $1.00\n", outContent.toString());
+		assertFalse(coinChanger.deductTotalWasCalled);
+		assertTrue(coinChanger.isPossiableToDeductAmountWasCalled);
+	}
+	
+	
+
+	
+	
+	
+		
 	public void testReturnChange()
 			throws Exception {
 		
 		MockCoinChanger coinChanger = new MockCoinChanger();
 		coinChanger.setTotal(1.00);
-		VendingMachine machine = new VendingMachine(coinChanger);
+		VendingMachine machine = new VendingMachine(coinChanger,new MockInventoryManager());
 		
 		System.setIn(new ByteArrayInputStream("3\n".getBytes()));
 		
@@ -201,7 +437,7 @@ public class VendingMachineTest extends TestCase {
 		coinReturnToSet.setTotal(3.05);
 		coinChanger.setCoinReturn(coinReturnToSet);
 		
-		VendingMachine machine = new VendingMachine(coinChanger);
+		VendingMachine machine = new VendingMachine(coinChanger,new MockInventoryManager());
 		
 		
 		machine.makeSelection(new Scanner(System.in), "4");
@@ -212,7 +448,7 @@ public class VendingMachineTest extends TestCase {
 	
 	public void testDoNotDisplaysInsertCoinOption() throws Exception {
 
-		VendingMachine machine = new VendingMachine(new MockCoinChanger());
+		VendingMachine machine = new VendingMachine(new MockCoinChanger(),new MockInventoryManager());
 
 		machine.makeSelection(new Scanner(System.in), "0");
 		assertEquals("", outContent.toString());

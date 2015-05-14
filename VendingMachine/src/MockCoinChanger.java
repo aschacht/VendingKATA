@@ -11,6 +11,8 @@ public class MockCoinChanger implements CoinChangerInterface {
 	public double amountDeducted;
 	public boolean returnChangeWasCalled = false;
 	public CoinReturnInterface coinReturn;
+	public boolean isPossiableToDeductAmountWasCalled=false;
+	public boolean isPossibleToDeduct=false;
 	
 
 	@Override
@@ -48,10 +50,9 @@ public class MockCoinChanger implements CoinChangerInterface {
 	}
 	
 	@Override
-	public boolean deductAmount(double amountToDeduct){
+	public void deductAmount(double amountToDeduct){
 		deductTotalWasCalled = true;
 		amountDeducted = amountToDeduct;
-		return true;
 	}
 
 	public CoinReturnInterface getCoinReturn() {
@@ -61,7 +62,16 @@ public class MockCoinChanger implements CoinChangerInterface {
 	public void setCoinReturn(CoinReturnInterface coinReturnToSet){
 		coinReturn =coinReturnToSet;
 	}
+
+
+	@Override
+	public boolean isPossibleToDeductAmount(double amountToDedduct) {
+		isPossiableToDeductAmountWasCalled = true;
+		return isPossibleToDeduct;
+	}
 	
-	
+	public void setIsPossibleToDeduct(boolean possible){
+		isPossibleToDeduct = possible;
+	}
 	
 }
